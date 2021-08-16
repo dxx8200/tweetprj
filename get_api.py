@@ -1,9 +1,8 @@
 import tweepy
-import csv
 import json
-import wget
+import os
 
-DEFAULT_TKPATH = "../config/tc.json"
+DEFAULT_TKPATH = os.path.abspath(os.path.join(os.path.dirname(__file__),'../config/tc.json'))
 
 def OAuth1(tk_path = DEFAULT_TKPATH):
     consumer_key, consumer_secret, access_key, access_secret = from_file(tk_path)
