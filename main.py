@@ -7,9 +7,7 @@ import hashtag
 import download
 import time
 import os
-import json
 import datetime
-from datetime import timedelta
 from json import JSONEncoder
 import dateutil.parser
 from html_util import htmlParser
@@ -20,8 +18,7 @@ L1_PATH = os.path.join(MEDIA_PATH, 'L1')
 L2_PATH = os.path.join(MEDIA_PATH, 'L2')
 BL_PATH = os.path.join(MEDIA_PATH, 'delete')
 NEW_PATH = os.path.join(MEDIA_PATH, 'new')
-HTML_PATH = '_.html'
-ACCESS_INTERVAL = 2 # Seconds
+HTML_PATH = '.html'
 LOAD_TIME_INTERVAL = 60*60*24*2 # 2 Days
 LOAD_L1_INTERVAL = 60*60*24*5 # 5 Days
 max_users = 2000
@@ -39,7 +36,7 @@ def DecodeDateTime(empDict):
       empDict["created_at"] = dateutil.parser.parse(empDict["created_at"])
       return empDict
 
-def download_media(tweets, download_path):
+def download_media(tweets, uname, download_path):
     list_url = []
     for tweet in tweets:
         if tweet and tweet['media']:
@@ -48,7 +45,7 @@ def download_media(tweets, download_path):
     len_download = len(list_download)
     for i in range(len_download):
         file = list_download[i]
-        print("downloading [%s] [%d/%d] [%s]...."%(download_path.split('\\')[-1],i+1,len_download,file))
+        print("downloading [%s] [%d/%d] [%s]...."%(uname,i+1,len_download,file))
         download.download_file(file, download_path)
 
 def get_related_users(api, user_screen_name):
@@ -68,19 +65,19 @@ def download_tweets(api, tweets, user_screen_name):
     return new_raw_tweets
 
 def load_user_tweets(api, user_screen_name, tweet_folder):
-    tweet_file = os.path.join(tweet_folder, HTML_PATH)
-    tweet_html = htmlParser(tweet_file)
+    tweet_file = os.path.join(tweet_folder, user_screen_name+HTML_PATH)
+    tweet_html = htmlParser(user_screen_name, tweet_file)
     new_tweets = download_tweets(api, tweet_html.get_tweets(), user_screen_name)
     new_medias = media.get_all_media(new_tweets)
     tweet_html.update_tweets(new_tweets, new_medias) 
     tweet_html.save()
 
-    download_media(tweet_html.get_tweets(), tweet_folder)    
+    download_media(tweet_html.get_tweets(), user_screen_name, os.path.join(tweet_folder, user_screen_name))    
     return new_tweets
 
 def main():
     api = OAuth1()
-    last_load_time = last_access_time = last_l1_load_time = 0
+    last_load_time = last_l1_load_time = 0
     l0 = []; l1 = [];l2 = [];block = [];wait_list = [];has_update = [];has_accessed = []
     dict_user_path = {}
     l1_loaded = False
@@ -95,9 +92,9 @@ def main():
             has_update = []
             has_accessed = []
             dict_user_path.clear()
-            dict_user_path.update({d:os.path.join(L0_PATH,d) for d in l0})
-            dict_user_path.update({d:os.path.join(L1_PATH,d) for d in l1})
-            dict_user_path.update({d:os.path.join(L2_PATH,d) for d in l2})
+            dict_user_path.update({d:L0_PATH for d in l0})
+            dict_user_path.update({d:L1_PATH for d in l1})
+            dict_user_path.update({d:L2_PATH for d in l2})
             wait_list.extend(l0)
         
         if current_time - last_l1_load_time > LOAD_L1_INTERVAL:
@@ -112,13 +109,8 @@ def main():
         if current_user in block:
             continue
         
-        interval_time = current_time - last_access_time
-        if interval_time < ACCESS_INTERVAL:
-            time.sleep(ACCESS_INTERVAL - interval_time) 
-
-        print(f'Processing user:[{current_user}]')
+        print(f'Processing user:[{current_user}][{len(wait_list)}]')
         has_accessed.append(current_user)
-        last_access_time = time.time()
         if len(load_user_tweets(api, current_user, dict_user_path[current_user])) > 0:
             has_update.append(current_user)
             
@@ -127,8 +119,7 @@ def main():
             related_users = set(get_related_users(api, current_user))
         related_users = [u for u in related_users if u not in l0 and u not in l1 and u not in l2 and u not in has_accessed]
         wait_list.extend(related_users)
-        dict_user_path.update({d:os.path.join(NEW_PATH,d) for d in related_users})
-
+        dict_user_path.update({d:NEW_PATH for d in related_users})
 
 if __name__ == "__main__":
     main()

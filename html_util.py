@@ -3,10 +3,11 @@ import os
 from datetime import datetime
 
 class htmlParser(HTMLParser):
-    def __init__(self, path):
+    def __init__(self, uname, path):
         HTMLParser.__init__(self)
         self.tweets = []
         self.path = path
+        self.uname = uname
         self.is_parsing_tweet = False
         self.is_parsing_text = False
         self.new_tweet = {}
@@ -78,14 +79,19 @@ class htmlParser(HTMLParser):
     def get_tweets(self):
         return self.tweets
     
-    def gen_img(self, img_path):
-        return f'\t<img src="{img_path}" width="300">'
+    def gen_img(self, uname, img_path):
+        return f'\t<img src="{uname}/{img_path}" width="300">'
 
-    def gen_video(self, video_path):
-        return f'\t<video width="300" controls><source src="{video_path}" type="video/mp4"></video>'
+    def gen_video(self, uname, video_path):
+        return f'\t<video width="300" controls><source src="{uname}/{video_path}" type="video/mp4"></video>'
     
-    def gen_text(self, text):
-        return f'\t<p>{text}</p>'
+    def gen_text(self, text, created_at):
+        return f'\t<p>[{created_at}] {text}</p>'
+
+    def url_to_local(self, url):
+        file_name = url.split('/')[-1]
+        file_name = file_name.split('?')[0]
+        return file_name
 
     def gen_tweet(self, tweet):
         id = tweet["id"]
@@ -95,13 +101,13 @@ class htmlParser(HTMLParser):
         lang = tweet["lang"]
         retweet_count = tweet["retweet_count"]
         res = [f'<div id="{id}" created_at="{created_at}" source="{source}" source_url="{source_url}" lang="{lang}" retweet_count="{retweet_count}">']
-        res.append(self.gen_text(tweet["text"]))
+        res.append(self.gen_text(tweet["text"], created_at))
         if 'media' in tweet.keys():
             for m in tweet['media']:
                 if m[0] == 'photo':
-                    res.append(self.gen_img(m[1]))
+                    res.append(self.gen_img(self.uname, self.url_to_local(m[1])))
                 elif m[0] == 'video':
-                    res.append(self.gen_video(m[1]))
+                    res.append(self.gen_video(self.uname, self.url_to_local(m[1])))
         res.append('</div>')
         return '\n\t'.join(res)
 
@@ -109,7 +115,7 @@ class htmlParser(HTMLParser):
         res = ['<!DOCTYPE html>',
                '<html>',
                '\t<head>',
-               '\t\t<link rel="stylesheet" href="../style.css">',
+               '\t\t<link rel="stylesheet" href="style.css">',
                '\t</head>',
                '\t<body>']
         res.extend([self.gen_tweet(h) for h in self.tweets])
@@ -118,6 +124,9 @@ class htmlParser(HTMLParser):
         return '\n'.join(res)
 
     def save(self):
+        folder = os.path.dirname(self.path)
+        if not os.path.exists(folder):
+            os.makedirs(folder)
         with open(self.path, 'w', encoding="utf-8") as f:
             f.write(self.gen_html_str())
 

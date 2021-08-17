@@ -15,7 +15,7 @@ def download_file(src_url, dst_path, retry = 5, delay = 0.5):
     filepath = os.path.join(dst_path, filename)
     if not os.path.exists(filepath):
         if not os.path.exists(dst_path):
-            os.mkdir(dst_path)
+            os.makedirs(dst_path)
 
         i_retry = 0
         b_success = False
