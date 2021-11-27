@@ -11,6 +11,7 @@ import datetime
 from json import JSONEncoder
 import dateutil.parser
 from html_util import htmlParser
+from chat import Chat
 
 MEDIA_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../media'))
 L0_PATH = os.path.join(MEDIA_PATH, 'L0')
@@ -21,6 +22,7 @@ NEW_PATH = os.path.join(MEDIA_PATH, 'new')
 HTML_PATH = '.html'
 LOAD_TIME_INTERVAL = 60*60*24*2 # 2 Days
 LOAD_L1_INTERVAL = 60*60*24*5 # 5 Days
+MESSAGE_INTERVAL = 60*60*1 # 1 Hour
 max_users = 2000
 
 # subclass JSONEncoder
@@ -77,7 +79,8 @@ def load_user_tweets(api, user_screen_name, tweet_folder):
 
 def main():
     api = OAuth1()
-    last_load_time = last_l1_load_time = 0
+    chat = Chat()
+    last_load_time = last_message_time = last_l1_load_time = 0
     l0 = []; l1 = [];l2 = [];block = [];wait_list = [];has_update = [];has_accessed = []
     dict_user_path = {}
     l1_loaded = False
@@ -96,9 +99,16 @@ def main():
             dict_user_path.update({d:L1_PATH for d in l1})
             dict_user_path.update({d:L2_PATH for d in l2})
             wait_list.extend(l0)
+            chat.send(f"=== Loadeded lists L0[{len(l0)}] L1[{len(l1)}] L2[{len(l2)}] block[{len(block)}] ===")
         
         if current_time - last_l1_load_time > LOAD_L1_INTERVAL:
             l1_loaded = False
+
+        if current_time - last_message_time > MESSAGE_INTERVAL:
+            #chat.send(f"Wait_list len[{len(wait_list)}]")
+            #chat.send(f"Updated: {has_update}")
+            has_update = []
+            last_message_time = current_time
 
         if not l1_loaded and len(wait_list) == 0:
             wait_list.extend(l1)
@@ -109,18 +119,28 @@ def main():
         if current_user in block:
             continue
         
-        print(f'Processing user:[{current_user}][{len(wait_list)}]')
+        
         has_accessed.append(current_user)
-        if len(load_user_tweets(api, current_user, dict_user_path[current_user])) > 0:
-            has_update.append(current_user)
-            
-        related_users = []
-        if current_user in l0 or current_user in l1:
-            related_users = set(get_related_users(api, current_user))
-        related_users = [u for u in related_users if u not in l0 and u not in l1 and u not in l2 and u not in has_accessed]
-        wait_list.extend(related_users)
-        dict_user_path.update({d:NEW_PATH for d in related_users})
+        new_tweets = []
+        try:
+            new_tweets = load_user_tweets(api, current_user, dict_user_path[current_user])
+            if len(new_tweets) > 0:
+                has_update.append(current_user)
+            related_users = []
+            if current_user in l0:
+                related_users = set(get_related_users(api, current_user))
+            related_users = [u for u in related_users if u not in dict_user_path.keys() and u not in block]
+            wait_list.extend(related_users)
+            dict_user_path.update({d:NEW_PATH for d in related_users})
 
+            message = f'Processed [{current_user}] new[{len(new_tweets)}] wait_list[{len(wait_list)}]'
+            print(message)
+            chat.send(message)
+        except Exception as e:
+            print(e)
+            chat.send(str(e))
+
+           
 if __name__ == "__main__":
     main()
 

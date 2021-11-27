@@ -26,7 +26,8 @@ class htmlParser(HTMLParser):
             self.is_parsing_tweet = True
         
         if tag == 'p' and self.is_parsing_tweet:
-            self.is_parsing_text = True
+            if attrs and ('type','text') in attrs:
+                self.is_parsing_text = True
 
         if tag == 'img' and self.is_parsing_tweet:
             self.new_tweet["media"].append(('photo', self.get_attr(attrs, "src")))
@@ -85,8 +86,11 @@ class htmlParser(HTMLParser):
     def gen_video(self, uname, video_path):
         return f'\t<video width="300" controls><source src="{uname}/{video_path}" type="video/mp4"></video>'
     
-    def gen_text(self, text, created_at):
-        return f'\t<p>[{created_at}] {text}</p>'
+    def gen_text(self, text):
+        return f'\t<p type="text">{text}</p>'
+
+    def gen_time(self, created_at):
+        return f'\t<p type="time">{created_at}</p>'
 
     def url_to_local(self, url):
         file_name = url.split('/')[-1]
@@ -101,7 +105,8 @@ class htmlParser(HTMLParser):
         lang = tweet["lang"]
         retweet_count = tweet["retweet_count"]
         res = [f'<div id="{id}" created_at="{created_at}" source="{source}" source_url="{source_url}" lang="{lang}" retweet_count="{retweet_count}">']
-        res.append(self.gen_text(tweet["text"], created_at))
+        res.append(self.gen_time(created_at))
+        res.append(self.gen_text(tweet["text"]))
         if 'media' in tweet.keys():
             for m in tweet['media']:
                 if m[0] == 'photo':
@@ -115,7 +120,7 @@ class htmlParser(HTMLParser):
         res = ['<!DOCTYPE html>',
                '<html>',
                '\t<head>',
-               '\t\t<link rel="stylesheet" href="style.css">',
+               '\t\t<link rel="stylesheet" href="../style.css">',
                '\t</head>',
                '\t<body>']
         res.extend([self.gen_tweet(h) for h in self.tweets])

@@ -20,7 +20,7 @@ def get_all_tweets(api, screen_name = '', count=999999, since_id = -1, max_id = 
             else:   
                 new_tweets = get_tweets(api, screen_name, 200, since_id, all_the_tweets[-1].id-1)
     except tweepy.error.TweepError as err:
-        print("Tweepy Error:{0}".format(err))
+        raise Exception(f'[{screen_name}], Tweepy Error:{err}')
     return all_the_tweets
 
 def get_tweets(api, screen_name='', count = -1, since_id = -1, max_id = -1):
