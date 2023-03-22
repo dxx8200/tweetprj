@@ -25,7 +25,7 @@ def reply_users(all_tweets):
         if hasattr(status, 'in_reply_to_screen_name'):
             if status.in_reply_to_screen_name is not None:
                 res.add(status.in_reply_to_screen_name)
-    return res
+    return list(res)
 
 def mentioned_users(all_tweets):
     res = set()
@@ -34,4 +34,4 @@ def mentioned_users(all_tweets):
             for user in status.entities.get('user_mentions', []):
                 if 'screen_name' in user:
                     res.add(user['screen_name'])
-    return res
+    return list(res)

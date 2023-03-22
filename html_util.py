@@ -1,8 +1,20 @@
 from html.parser import HTMLParser
 import os
+import re
 from datetime import datetime
 
+def add_link(match_obj):
+    if match_obj.group(1) is not None:
+        return f'<a ref="{match_obj.group(1)}">{match_obj.group(1)}</a>'
+    
+def find_link(string):   
+    # findall() has been used
+    # with valid conditions for urls in string
+    regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
+    return re.sub(regex, add_link, string)
+
 class htmlParser(HTMLParser):
+    
     def __init__(self, uname, path):
         HTMLParser.__init__(self)
         self.tweets = []
@@ -18,7 +30,7 @@ class htmlParser(HTMLParser):
             self.new_tweet["id"] = int(self.get_attr(attrs, "id"))
             self.new_tweet["created_at"] = datetime.strptime(self.get_attr(attrs, "created_at"),'%Y-%m-%d %H:%M:%S')
             self.new_tweet["source"] = self.get_attr(attrs, "source")
-            self.new_tweet["source_url"] = self.get_attr(attrs, "soruce_url")
+            self.new_tweet["source_url"] = self.get_attr(attrs, "source_url")
             self.new_tweet["lang"] = self.get_attr(attrs, "lang")
             self.new_tweet["retweet_count"] = self.get_attr(attrs, "retweet_count")
             self.new_tweet["media"] = []
@@ -30,10 +42,10 @@ class htmlParser(HTMLParser):
                 self.is_parsing_text = True
 
         if tag == 'img' and self.is_parsing_tweet:
-            self.new_tweet["media"].append(('photo', self.get_attr(attrs, "src")))
+            self.new_tweet["media"].append(('photo', self.get_attr(attrs, "org_src")))
         
         if tag == 'source' and self.is_parsing_tweet:
-            self.new_tweet["media"].append(('video', self.get_attr(attrs, "src")))
+            self.new_tweet["media"].append(('video', self.get_attr(attrs, "org_src")))
             
     def get_attr(self, attrs, attr_str):
         for attr in attrs:
@@ -61,18 +73,16 @@ class htmlParser(HTMLParser):
     def update_tweets(self, new_raw_tweets, new_medias):
         new_tweets = []
         for tweet in new_raw_tweets:
-            t_media = []
-            if tweet.id in new_medias:
-                t_media.extend(new_medias[tweet.id])
-            new_tweets.append({
-            'id':tweet.id,
-            'text':tweet.text,
-            'source':tweet.source,
-            'source_url':tweet.source_url,
-            'lang':tweet.lang,
-            'retweet_count':tweet.retweet_count,
-            'created_at':tweet.created_at,
-            'media':t_media
+            if tweet.id in new_medias and not tweet.text.startswith('RT'):
+                new_tweets.append({
+                    'id':tweet.id,
+                    'text':tweet.text,
+                    'source':tweet.source,
+                    'source_url':tweet.source_url,
+                    'lang':tweet.lang,
+                    'retweet_count':tweet.retweet_count,
+                    'created_at':tweet.created_at,
+                    'media':new_medias[tweet.id]
             })
         new_tweets.extend(self.tweets)
         self.tweets = new_tweets
@@ -80,11 +90,11 @@ class htmlParser(HTMLParser):
     def get_tweets(self):
         return self.tweets
     
-    def gen_img(self, uname, img_path):
-        return f'\t<img src="{uname}/{img_path}" width="300">'
+    def gen_img(self, uname, org_src, img_path):
+        return f'\t<img org_src="{org_src}" src="../{uname}/{img_path}" width="300">'
 
-    def gen_video(self, uname, video_path):
-        return f'\t<video width="300" controls><source src="{uname}/{video_path}" type="video/mp4"></video>'
+    def gen_video(self, uname, org_src, video_path):
+        return f'\t<video width="300" controls><source org_src="{org_src}" src="../{uname}/{video_path}" type="video/mp4"></video>'
     
     def gen_text(self, text):
         return f'\t<p type="text">{text}</p>'
@@ -110,9 +120,9 @@ class htmlParser(HTMLParser):
         if 'media' in tweet.keys():
             for m in tweet['media']:
                 if m[0] == 'photo':
-                    res.append(self.gen_img(self.uname, self.url_to_local(m[1])))
+                    res.append(self.gen_img(self.uname, m[1], self.url_to_local(m[1])))
                 elif m[0] == 'video':
-                    res.append(self.gen_video(self.uname, self.url_to_local(m[1])))
+                    res.append(self.gen_video(self.uname, m[1], self.url_to_local(m[1])))
         res.append('</div>')
         return '\n\t'.join(res)
 
@@ -120,7 +130,7 @@ class htmlParser(HTMLParser):
         res = ['<!DOCTYPE html>',
                '<html>',
                '\t<head>',
-               '\t\t<link rel="stylesheet" href="../style.css">',
+               '\t\t<link rel="stylesheet" href="../../style.css">',
                '\t</head>',
                '\t<body>']
         res.extend([self.gen_tweet(h) for h in self.tweets])
