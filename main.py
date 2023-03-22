@@ -57,7 +57,7 @@ def get_list_from_file(path):
 def get_related_users(api, tweets, user_screen_name):
     #mentioned_users = user.mentioned_users(all_tweets)
     #reply_users = user.reply_users(all_tweets)
-    return user.get_friends(api, user_screen_name) + user.mentioned_users(tweets)
+    return user.get_friends(api, user_screen_name) #+ user.mentioned_users(tweets)
 
 def load_user_list(src_path):
     return sorted([d.name for d in os.scandir(src_path) if d.is_dir() and not d.name==HTML_FOLDER], key=str.lower)
