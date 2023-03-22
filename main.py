@@ -94,7 +94,7 @@ def main(api, chat):
     l2_list = []
     block_list = []
     wait_list = []
-    has_update = []
+    has_updated = []
     has_accessed = []
     dict_user_path = {}
     #l1_loaded = False
@@ -134,7 +134,7 @@ def main(api, chat):
         #    l1_loaded = False
 
         if current_time - last_message_time > MESSAGE_INTERVAL:
-            chat.send(f"=== Wait_list[{len(wait_list)}] Updated[{len(has_update)}]\
+            chat.send(f"=== Wait_list[{len(wait_list)}] Updated[{len(has_updated)}]\
                 Current_Level[{current_level}]===")
             has_updated = []
             last_message_time = current_time
