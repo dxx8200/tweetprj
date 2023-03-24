@@ -125,8 +125,7 @@ def main(api, chat):
             current_level = 'l0'
             current_list = l0_list
             
-            chat.send(f"=== Loadeded lists L0[{len(l0_list)}] L1[{len(l1_list)}] \
-                L2[{len(l2_list)}] New[{len(new_list)}] block[{len(block_list)}] ===")
+            chat.send(f"=== Lists L0[{len(l0_list)}] L1[{len(l1_list)}] L2[{len(l2_list)}] New[{len(new_list)}] block[{len(block_list)}] ===")
             
         elif len(current_list) <= 0:
             if current_level == 'l0':
@@ -178,7 +177,7 @@ def main(api, chat):
             #chat.send(message)
             
             if current_time - last_message_time > MESSAGE_INTERVAL:
-                chat.send(f"=== Wait_list[{len(current_list)}] Updated[{has_updated}] Current[{current_user}] Current_Level[{current_level}]===")
+                chat.send(f"=== Current_list[{len(current_list)}] Current_Level[{current_level}] Updated[{has_updated}] New[{len(new_list)}] Current[{current_user}] ===")
                 last_message_time = current_time
                 
         except tweepy.error.TweepError as err:
