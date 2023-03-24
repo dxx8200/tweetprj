@@ -1,4 +1,6 @@
 from get_api import OAuth1
+import tweepy
+import shutil
 import timeline
 import user
 import media
@@ -16,6 +18,7 @@ L0_PATH = os.path.join(MEDIA_PATH, 'L0')
 L1_PATH = os.path.join(MEDIA_PATH, 'L1')
 L2_PATH = os.path.join(MEDIA_PATH, 'L2')
 BL_PATH = os.path.join(MEDIA_PATH, 'block')
+DEL_PATH = os.path.join(MEDIA_PATH, 'delete')
 BL_FILE = os.path.join(MEDIA_PATH, "block.txt")
 NEW_PATH = os.path.join(MEDIA_PATH, 'new')
 HTML_FOLDER = '_'
@@ -23,7 +26,7 @@ HTML_PATH = '.html'
 LOAD_TIME_INTERVAL = 60*60*24*2 # 2 Days
 LOAD_L1_INTERVAL = 60*60*24*5 # 5 Days
 MESSAGE_INTERVAL = 60*60*0.5 # 0.5 Hour
-max_users = 2000
+MAX_NEW_USERS = 200
 
 # subclass JSONEncoder
 class DateTimeEncoder(JSONEncoder):
@@ -88,15 +91,16 @@ def main(api, chat):
     last_load_time = 0 # the last time load from hard drvie
     last_message_time = 0 # the last time send a message
     #last_l1_load_time = 0 
-    current_level = 0
+
     l0_list = []
     l1_list = []
     l2_list = []
     block_list = []
-    wait_list = []
-    has_updated = []
-    has_accessed = []
+    
+    has_updated = 0
     dict_user_path = {}
+    current_level = 'l0'
+    current_list = []
     #l1_loaded = False
     #
     # Main Loop
@@ -109,35 +113,37 @@ def main(api, chat):
             l2_list = load_user_list(L2_PATH)
             new_list = load_user_list(NEW_PATH)
             block_list = get_list_from_file(BL_FILE)  #load_user_list(BL_PATH)
-            has_updated = []
-            has_accessed = []
+            
+            has_updated = 0
+            
             dict_user_path.clear()
             dict_user_path.update({d:L0_PATH for d in l0_list})
             dict_user_path.update({d:L1_PATH for d in l1_list})
             dict_user_path.update({d:L2_PATH for d in l2_list})
             dict_user_path.update({d:NEW_PATH for d in new_list})
-            wait_list.extend(l0_list)
-            current_level = 0
+            
+            current_level = 'l0'
+            current_list = l0_list
+            
             chat.send(f"=== Loadeded lists L0[{len(l0_list)}] L1[{len(l1_list)}] \
-                L2[{len(l2_list)}] block[{len(block_list)}] ===")
-        elif len(wait_list) <= 0:
-            if current_level == 0:
-                wait_list.extend(l1_list)
-                current_level = 1
-            elif current_level == 1:
-                wait_list.extend(l2_list)
-                current_level = 2
+                L2[{len(l2_list)}] New[{len(new_list)}] block[{len(block_list)}] ===")
+            
+        elif len(current_list) <= 0:
+            if current_level == 'l0':
+                current_list = l1_list
+                current_level = 'l1'
+            elif current_level == 'l1':
+                current_list = l2_list
+                current_level = 'l2'
+            elif current_level == 'l2':
+                current_list = new_list
+                current_level = 'new'
             else:
-                wait_list.extend(l0_list)
-                current_level = 0
+                current_list = l0_list
+                current_level = 'l0'
+                
         #if current_time - last_l1_load_time > LOAD_L1_INTERVAL:
         #    l1_loaded = False
-
-        if current_time - last_message_time > MESSAGE_INTERVAL:
-            chat.send(f"=== Wait_list[{len(wait_list)}] Updated[{len(has_updated)}]\
-                Current_Level[{current_level}]===")
-            has_updated = []
-            last_message_time = current_time
 
         #if not l1_loaded and len(wait_list) == 0:
         #    wait_list.extend(l1)
@@ -148,30 +154,47 @@ def main(api, chat):
         # Update the wait list
         current_user = ""
         try:
-            current_user = wait_list.pop(0)
+            current_user = current_list.pop(0)
             if current_user in block_list:
                 continue 
             
             # get new tweets       
             new_tweets = load_user_tweets(api, current_user, dict_user_path[current_user])
             if len(new_tweets) > 0:
-                has_updated.append(current_user)
+                has_updated = has_updated + 1
             
             # get related users for l0
             if current_user in l0_list:
                 related_users = set(get_related_users(api, new_tweets, current_user))
-                related_users = [u for u in related_users if u not in dict_user_path.keys() and u not in block_list]
-                wait_list.extend(related_users)
-                dict_user_path.update({d:NEW_PATH for d in related_users})
-            
-            has_accessed.append(current_user)
-            message = f'Processed[{current_user}] new[{len(new_tweets)}] wait_list[{len(wait_list)}]'
+                new_users = [u for u in related_users if u not in dict_user_path.keys() and u not in block_list]
+                if len(new_list) < MAX_NEW_USERS:
+                    new_list.extend(new_users)
+                    dict_user_path.update({d:NEW_PATH for d in new_users})
+                if len(new_list) > MAX_NEW_USERS:
+                    new_list = new_list[:MAX_NEW_USERS]
+                           
+            message = f'Processed[{current_user}] new[{len(new_tweets)}] current_list_len[{len(current_list)}] current_level[{current_level}]'
             print(message)
             #chat.send(message)
+            
+            if current_time - last_message_time > MESSAGE_INTERVAL:
+                chat.send(f"=== Wait_list[{len(current_list)}] Updated[{has_updated}] Current[{current_user}] Current_Level[{current_level}]===")
+                last_message_time = current_time
+                
+        except tweepy.error.TweepError as err:
+            if err.api_code == 34:
+                try:
+                    shutil.move(os.path.join(dict_user_path[current_user], current_user), os.path.join(DEL_PATH, current_user))   
+                    del dict_user_path[current_user]
+                except:
+                    pass
+            message = f'User[{current_user}] Error[{str(err)}]'
+            print(message)
+            chat.send(message)   
         except Exception as e:
             message = f'User[{current_user}] Error[{str(e)}]'
-            print(e)
-            chat.send(str(e))
+            print(message)
+            chat.send(message)
 
            
 if __name__ == "__main__":

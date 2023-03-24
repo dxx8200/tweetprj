@@ -5,22 +5,19 @@ from get_api import from_file
 def get_all_tweets(api, screen_name = '', count=999999, since_id = -1, max_id = -1):
     all_the_tweets = []
     left_count = count
-    try:
+    if left_count < 200:
+        new_tweets = get_tweets(api, screen_name, left_count, since_id, max_id)
+    else:
+        new_tweets = get_tweets(api, screen_name, 200, since_id, max_id)
+    while len(new_tweets) > 0:
+        all_the_tweets.extend(new_tweets)
+        left_count = left_count - len(new_tweets)
+        if left_count <= 0:
+            break
         if left_count < 200:
-            new_tweets = get_tweets(api, screen_name, left_count, since_id, max_id)
-        else:
-            new_tweets = get_tweets(api, screen_name, 200, since_id, max_id)
-        while len(new_tweets) > 0:
-            all_the_tweets.extend(new_tweets)
-            left_count = left_count - len(new_tweets)
-            if left_count <= 0:
-                break
-            if left_count < 200:
-                new_tweets = get_tweets(api, screen_name, left_count, since_id, all_the_tweets[-1].id-1)
-            else:   
-                new_tweets = get_tweets(api, screen_name, 200, since_id, all_the_tweets[-1].id-1)
-    except tweepy.error.TweepError as err:
-        raise Exception(f'[{screen_name}], Tweepy Error:{err}')
+            new_tweets = get_tweets(api, screen_name, left_count, since_id, all_the_tweets[-1].id-1)
+        else:   
+            new_tweets = get_tweets(api, screen_name, 200, since_id, all_the_tweets[-1].id-1)
     return all_the_tweets
 
 def get_tweets(api, screen_name='', count = -1, since_id = -1, max_id = -1):
