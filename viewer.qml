@@ -1,6 +1,6 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Layouts 2.15
+import QtQuick 
+import QtQuick.Controls
+import QtQuick.Layouts 
 import Qt.labs.folderlistmodel
 
 ApplicationWindow {
@@ -17,12 +17,46 @@ ApplicationWindow {
     property int i_user: 0
     property string folder_name: "file:" + Qt.application.arguments[1]
 
+
+
     GridView {
         id: gridview
         anchors.fill: parent
         anchors.horizontalCenter: parent.horizontalCenter
         cellWidth: 300; cellHeight: 400
         ScrollBar.vertical: ScrollBar { active: true }
+
+        Dialog {
+            id: goto_diag
+            modal: true
+            title: "Goto User:"
+            height: 100
+            width: 300
+            standardButtons: Dialog.Ok | Dialog.Cancel
+            anchors.centerIn: parent       
+
+            TextField {
+                id: n_go
+                width: parent.width * 0.75
+                focus: true
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+            onAccepted: {
+                var iu = parseInt(n_go.text)-1
+                if (iu >= 0 && iu < user_list.count) {
+                    i_user = iu
+                    var f_url = user_list.get(i_user, "fileURL")
+                    if (f_url == "_") {
+                        i_user = i_user+increase
+                        f_url = user_list.get(i_user, "fileURL")
+                    }
+                    msg.text = "Loading..."
+                    img_list.folder = f_url
+                    main.title = "Image Viewer " + "["+(i_user+1)+"/"+user_list.count+"] " + f_url
+                }
+            }
+        }
 
         FolderListModel {
             id: user_list
@@ -176,6 +210,10 @@ ApplicationWindow {
             Action { text: qsTr("Cu&t") }
             Action { text: qsTr("&Copy") }
             Action { text: qsTr("&Paste") }
+            MenuItem {
+                text: qsTr("Goto")
+                onTriggered: goto_diag.open()
+            }
         }
         Menu {
             title: qsTr("&Help")
