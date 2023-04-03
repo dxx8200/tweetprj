@@ -106,7 +106,7 @@ def main(api, chat):
     # Main Loop
     while True:
         current_time = time.time()
-        if current_time - last_load_time > LOAD_TIME_INTERVAL:
+        if (current_time - last_load_time > LOAD_TIME_INTERVAL) or (len(current_list) <= 0 and current_level == 'new'):
             last_load_time = time.time()
             l0_list = load_user_list(L0_PATH)
             l1_list = load_user_list(L1_PATH)
@@ -137,19 +137,7 @@ def main(api, chat):
             elif current_level == 'l2':
                 current_list = new_list
                 current_level = 'new'
-            else:
-                current_list = l0_list
-                current_level = 'l0'
                 
-        #if current_time - last_l1_load_time > LOAD_L1_INTERVAL:
-        #    l1_loaded = False
-
-        #if not l1_loaded and len(wait_list) == 0:
-        #    wait_list.extend(l1)
-        #    l1_loaded = True
-        #    last_l1_load_time = time.time()
-
-
         # Update the wait list
         current_user = ""
         try:
