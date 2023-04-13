@@ -1,6 +1,8 @@
 import sys
 import os
 import shutil
+import time
+import traceback
 import distutils.dir_util, distutils.file_util
 import errno
 from PySide6.QtGui import QGuiApplication
@@ -10,24 +12,15 @@ app = QGuiApplication(sys.argv)
 
 engine = QQmlApplicationEngine()
 engine.quit.connect(app.quit)
-engine.load('viewer.qml')
+engine.load(os.path.join(os.path.realpath(os.path.dirname(__file__)),'viewer.qml'))
 
 def move_folder(src, dst):
     try:
         if (os.path.normpath(src).lower() == os.path.normpath(dst).lower()): return
         if (os.path.exists(src)):
-            distutils.dir_util.copy_tree(src, dst)
-            shutil.rmtree(src)
-    except OSError as exc: # python >2.5
-        if exc.errno in (errno.ENOTDIR, errno.EINVAL):
-            try:
-                if (os.path.exists(dst)): os.remove(dst)
-                shutil.copy(src, dst)
-                shutil.rmtree(src)
-            except:
-                pass
+            shutil.move(src, dst)
     except:
-        pass
+        traceback.print_exc()
 
 def move_file(src, dst):
     try:
@@ -37,13 +30,13 @@ def move_file(src, dst):
             shutil.copy(src, dst)
             os.remove(src)
     except:
-        pass
+        traceback.print_exc()
     
 def remove_file(src):
     try:
         os.remove(src)
     except:
-        pass
+        traceback.print_exc()
     
 roots = engine.rootObjects()
 roots[0].move_folder.connect(move_folder)

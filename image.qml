@@ -2,6 +2,7 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 
 Column {
+
     Image {
         width: 300; height: 380
         fillMode: Image.PreserveAspectFit
@@ -14,4 +15,5 @@ Column {
         anchors.horizontalCenter: parent.horizontalCenter
         y: 380
     }
+
 }

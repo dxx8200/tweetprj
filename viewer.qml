@@ -17,14 +17,13 @@ ApplicationWindow {
     property int i_user: 0
     property string folder_name: "file:" + Qt.application.arguments[1]
 
-
-
     GridView {
         id: gridview
         anchors.fill: parent
         anchors.horizontalCenter: parent.horizontalCenter
         cellWidth: 300; cellHeight: 400
         ScrollBar.vertical: ScrollBar { active: true }
+
 
         Dialog {
             id: goto_diag
@@ -66,6 +65,8 @@ ApplicationWindow {
             showDirsFirst: true
             folder: folder_name
             sortField: "Name"
+            caseSensitive: false
+            sortCaseSensitive: false
             onStatusChanged: if (user_list.status == FolderListModel.Ready){
                 var f_url=""
                 if (user_list.count > 0)
@@ -86,7 +87,7 @@ ApplicationWindow {
 
         FolderListModel {
             id: img_list
-            nameFilters: ["*.jpg", "*.png", "*.mp4"]
+            nameFilters: ["*.jpg", "*.png"]
             showDirs: false
             showFiles: true
             folder: user_list.count>0?user_list.get(i_user, "FileURL"):""
@@ -94,6 +95,8 @@ ApplicationWindow {
             sortReversed: true
             onStatusChanged: if (img_list.status == FolderListModel.Ready) {
                 msg.text = img_list.folder + "["+img_list.count+"]"
+                //gridview.visible = true
+                bi.running = false
             }
         }
 
@@ -103,44 +106,27 @@ ApplicationWindow {
                 source: switch(fileSuffix){
                     case "jpg": return "image.qml"
                     case "png": return "image.qml"
-                    case "mp4": return "video.qml"
+                    //case "mp4": return "video.qml"
                 }
             }
         }
 
         model: img_list
         delegate: img_delegate
-        BusyIndicator {
-            running: gridview.status == Loader.Loading
-            anchors.centerIn: parent
-        }
-
         focus: true
         Keys.onPressed: (event) => {
             switch(event.key){
                 case Qt.Key_QuoteLeft:
-                    action.text = "Move "+user_list.get(i_user, "fileName")+" to l0"
-                    move_file(user_list.get(i_user, "filePath")+"/../_/"+user_list.get(i_user, "fileName")+".html", user_list.get(i_user, "filePath")+"/../../l0/_/"+user_list.get(i_user, "fileName")+".html")
-                    move_folder(user_list.get(i_user, "filePath"), user_list.get(i_user, "filePath")+"/../../l0/"+user_list.get(i_user, "fileName"))
-                    update_userlist()
+                    move_user(i_user, 'l0')
                     break
                 case Qt.Key_1:
-                    action.text = "Move "+user_list.get(i_user, "fileName")+" to l1"
-                    move_file(user_list.get(i_user, "filePath")+"/../_/"+user_list.get(i_user, "fileName")+".html", user_list.get(i_user, "filePath")+"/../../l1/_/"+user_list.get(i_user, "fileName")+".html")
-                    move_folder(user_list.get(i_user, "filePath"), user_list.get(i_user, "filePath")+"/../../l1/"+user_list.get(i_user, "fileName"))
-                    update_userlist()
+                    move_user(i_user, 'l1')
                     break
                 case Qt.Key_2:
-                    action.text = "Move "+user_list.get(i_user, "fileName")+" to l2"
-                    move_file(user_list.get(i_user, "filePath")+"/../_/"+user_list.get(i_user, "fileName")+".html", user_list.get(i_user, "filePath")+"/../../l2/_/"+user_list.get(i_user, "fileName")+".html")
-                    move_folder(user_list.get(i_user, "filePath"), user_list.get(i_user, "filePath")+"/../../l2/"+user_list.get(i_user, "fileName"))
-                    update_userlist()
+                    move_user(i_user, 'l2')
                     break
                 case Qt.Key_3:
-                    action.text = "Move "+user_list.get(i_user, "fileName")+" to block"
-                    move_file(user_list.get(i_user, "filePath")+"/../_/"+user_list.get(i_user, "fileName")+".html", user_list.get(i_user, "filePath")+"/../../block/_/"+user_list.get(i_user, "fileName")+".html")
-                    move_folder(user_list.get(i_user, "filePath"), user_list.get(i_user, "filePath")+"/../../block/"+user_list.get(i_user, "fileName"))
-                    update_userlist()
+                    move_user(i_user, 'block')
                     break
                 case Qt.Key_4:
                     //action.text = "4"
@@ -154,6 +140,19 @@ ApplicationWindow {
                     update_imglist(1)
                     break
             }
+        }
+
+        function move_user(i_user, new_level){
+            bi.running = true
+            var t_msg = "Moving "+user_list.get(i_user, "fileName")+" to "+new_level
+            msg.text = t_msg
+            action.text = "Move"
+            var file_path = user_list.get(i_user, "filePath")
+            var file_name = user_list.get(i_user, "fileName")
+            //update_imglist(1)
+            move_file(file_path+"/../_/"+file_name+".html", file_path+"/../../"+new_level+"/_/"+file_name+".html")
+            move_folder(file_path, file_path+"/../../"+new_level+"/"+file_name)
+            update_userlist()
         }
 
         function update_imglist(increase) {
@@ -174,6 +173,8 @@ ApplicationWindow {
                     i_user = i_user+increase
                     f_url = user_list.get(i_user, "fileURL")
                 }
+                //gridview.visible = false
+                bi.running = true
                 msg.text = "Loading..."
                 img_list.folder = f_url
                 main.title = "Image Viewer " + "["+(i_user+1)+"/"+user_list.count+"] " + f_url
@@ -181,17 +182,10 @@ ApplicationWindow {
         }
 
         function update_userlist() {
+            bi.running = true
             user_list.folder = ""
             user_list.folder = folder_name
         }
-    }
-
-    BusyIndicator {
-        id: bi
-        width: 100
-        height: 100
-        anchors.centerIn: parent
-        running: img_list.status == FolderListModel.Loading
     }
 
     menuBar: MenuBar {
@@ -251,4 +245,14 @@ ApplicationWindow {
             }
         }
     }
+            BusyIndicator {
+        id: bi
+        width: 100
+        height: 100
+        anchors.centerIn: parent
+        running: true
+        
+    }
+
+
 }

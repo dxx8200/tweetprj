@@ -21,12 +21,13 @@ BL_PATH = os.path.join(MEDIA_PATH, 'block')
 DEL_PATH = os.path.join(MEDIA_PATH, 'delete')
 BL_FILE = os.path.join(MEDIA_PATH, "block.txt")
 NEW_PATH = os.path.join(MEDIA_PATH, 'new')
-HTML_FOLDER = '_'
+
+HTML_FOLDER = '_html'
 HTML_PATH = '.html'
 LOAD_TIME_INTERVAL = 60*60*24*2 # 2 Days
 LOAD_L1_INTERVAL = 60*60*24*5 # 5 Days
 MESSAGE_INTERVAL = 60*60*0.5 # 0.5 Hour
-MAX_NEW_USERS = 200
+MAX_NEW_USERS = 500
 
 # subclass JSONEncoder
 class DateTimeEncoder(JSONEncoder):
@@ -52,6 +53,7 @@ def download_media(tweets, uname, download_path):
         file = list_download[i]
         print(f'Downloading[{uname}][{i+1}/{len_download}][{file}]')
         download.download_file(file, download_path)
+    return list_download
 
 def get_list_from_file(path):
     with open(path, 'r') as f:
@@ -73,16 +75,14 @@ def download_tweets(api, tweets, user_screen_name):
         new_raw_tweets = timeline.get_all_tweets(api, screen_name=user_screen_name)
     return new_raw_tweets
 
-def load_user_tweets(api, user_screen_name, tweet_folder):
-    tweet_html_file = os.path.join(tweet_folder, HTML_FOLDER, user_screen_name+HTML_PATH)
-    tweet_html = htmlParser(user_screen_name, tweet_html_file)
+def load_user_tweets(api, user_screen_name, tweet_folder, current_level):
+    tweet_html_file = os.path.join(tweet_folder, '../'+current_level+HTML_FOLDER, user_screen_name+HTML_PATH)
+    tweet_html = htmlParser(user_screen_name, tweet_html_file, current_level)
     new_tweets = download_tweets(api, tweet_html.get_tweets(), user_screen_name)
     new_medias = media.get_all_media(new_tweets)
     tweet_html.update_tweets(new_tweets, new_medias) 
-    tweet_html.save()
-
-    download_media(tweet_html.get_tweets(), user_screen_name, os.path.join(tweet_folder, user_screen_name))    
-    return new_tweets
+    tweet_html.save()   
+    return new_tweets, download_media(tweet_html.get_tweets(), user_screen_name, os.path.join(tweet_folder, user_screen_name)) 
 
 ##########################################################################
 # Main Function
@@ -146,8 +146,8 @@ def main(api, chat):
                 continue 
             
             # get new tweets       
-            new_tweets = load_user_tweets(api, current_user, dict_user_path[current_user])
-            if len(new_tweets) > 0:
+            new_tweets, list_download = load_user_tweets(api, current_user, dict_user_path[current_user], current_level)
+            if len(list_download) > 0:
                 has_updated = has_updated + 1
             
             # get related users for l0
@@ -160,7 +160,7 @@ def main(api, chat):
                 if len(new_list) > MAX_NEW_USERS:
                     new_list = new_list[:MAX_NEW_USERS]
                            
-            message = f'Processed[{current_user}] new[{len(new_tweets)}] current_list_len[{len(current_list)}] current_level[{current_level}]'
+            message = f'Processed[{current_user}] new[{len(list_download)}] current_list_len[{len(current_list)}] current_level[{current_level}]'
             print(message)
             #chat.send(message)
             
@@ -170,6 +170,12 @@ def main(api, chat):
                 
         except tweepy.error.TweepError as err:
             if err.api_code == 34:
+                try:
+                    shutil.move(os.path.join(dict_user_path[current_user], current_user), os.path.join(DEL_PATH, current_user))   
+                    del dict_user_path[current_user]
+                except:
+                    pass
+            if err.api_code == None and err.reason == 'Not authorized.':
                 try:
                     shutil.move(os.path.join(dict_user_path[current_user], current_user), os.path.join(DEL_PATH, current_user))   
                     del dict_user_path[current_user]
