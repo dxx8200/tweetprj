@@ -167,20 +167,13 @@ def main(api, chat):
             if current_time - last_message_time > MESSAGE_INTERVAL:
                 chat.send(f"=== Current_list[{len(current_list)}] Current_Level[{current_level}] Updated[{has_updated}] New[{len(new_list)}] Current[{current_user}] ===")
                 last_message_time = current_time
-                
+        except (tweepy.errors.Unauthorized, tweepy.errors.Forbidden, tweepy.errors.NotFound):
+            try:
+                shutil.move(os.path.join(dict_user_path[current_user], current_user), os.path.join(DEL_PATH, current_user))   
+                del dict_user_path[current_user]
+            except:
+                pass
         except tweepy.errors.TweepyException as err:
-            if err.api_code == 34:
-                try:
-                    shutil.move(os.path.join(dict_user_path[current_user], current_user), os.path.join(DEL_PATH, current_user))   
-                    del dict_user_path[current_user]
-                except:
-                    pass
-            if err.api_code == None and err.reason == 'Not authorized.':
-                try:
-                    shutil.move(os.path.join(dict_user_path[current_user], current_user), os.path.join(DEL_PATH, current_user))   
-                    del dict_user_path[current_user]
-                except:
-                    pass
             message = f'User[{current_user}] Error[{str(err)}]'
             print(message)
             chat.send(message)   
