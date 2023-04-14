@@ -122,18 +122,18 @@ def main(api, chat):
             dict_user_path.update({d:L2_PATH for d in l2_list})
             dict_user_path.update({d:NEW_PATH for d in new_list})
             
-            current_level = 'l0'
+            current_level = 'L0'
             current_list = l0_list
             
             chat.send(f"=== Lists L0[{len(l0_list)}] L1[{len(l1_list)}] L2[{len(l2_list)}] New[{len(new_list)}] block[{len(block_list)}] ===")
             
         elif len(current_list) <= 0:
-            if current_level == 'l0':
+            if current_level == 'L0':
                 current_list = l1_list
-                current_level = 'l1'
+                current_level = 'L1'
             elif current_level == 'l1':
                 current_list = l2_list
-                current_level = 'l2'
+                current_level = 'L2'
             elif current_level == 'l2':
                 current_list = new_list
                 current_level = 'new'
@@ -168,7 +168,7 @@ def main(api, chat):
                 chat.send(f"=== Current_list[{len(current_list)}] Current_Level[{current_level}] Updated[{has_updated}] New[{len(new_list)}] Current[{current_user}] ===")
                 last_message_time = current_time
                 
-        except tweepy.error.TweepError as err:
+        except tweepy.errors.TweepyException as err:
             if err.api_code == 34:
                 try:
                     shutil.move(os.path.join(dict_user_path[current_user], current_user), os.path.join(DEL_PATH, current_user))   

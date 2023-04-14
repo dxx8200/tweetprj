@@ -101,7 +101,7 @@ class htmlParser(HTMLParser):
         return f'\t<p type="text">{text}</p>'
 
     def gen_time(self, created_at):
-        return f'\t<p type="time">{created_at}</p>'
+        return f'\t<p type="time">{datetime.strftime(created_at,"%Y-%m-%d %H:%M:%S")}</p>'
 
     def url_to_local(self, url):
         file_name = url.split('/')[-1]
@@ -115,7 +115,7 @@ class htmlParser(HTMLParser):
         source_url = tweet["source_url"]
         lang = tweet["lang"]
         retweet_count = tweet["retweet_count"]
-        res = [f'<div id="{id}" created_at="{created_at}" source="{source}" source_url="{source_url}" lang="{lang}" retweet_count="{retweet_count}">']
+        res = [f'<div id="{id}" created_at="{datetime.strftime(created_at,"%Y-%m-%d %H:%M:%S")}" source="{source}" source_url="{source_url}" lang="{lang}" retweet_count="{retweet_count}">']
         res.append(self.gen_time(created_at))
         res.append(self.gen_text(tweet["text"]))
         if 'media' in tweet.keys():
