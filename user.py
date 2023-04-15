@@ -7,15 +7,15 @@ def get_friends(api, user_id=''):
     #return [friend.screen_name for friend in tweepy.Cursor(api.friends, 
     #id=user_id, skip_status=True, include_user_entities=False).items()]
     try:
-        return [friend.screen_name for friend in api.friends(id=user_id, skip_status=True, include_user_entities=False)]
-    except tweepy.error.TweepError as err:
+        return [friend.screen_name for friend in api.get_friends(screen_name=user_id, skip_status=True, include_user_entities=False)]
+    except tweepy.errors.TweepyException as err:
         print("Tweepy Error:{0}".format(err))
         return []
 
 def get_followers(api, user_id=''):
     try:
-        return [follower.screen_name for follower in api.followers(id=user_id, skip_status=True, include_user_entities=False)]
-    except tweepy.error.TweepError as err:
+        return [follower.screen_name for follower in api.get_followers(screen_name=user_id, skip_status=True, include_user_entities=False)]
+    except tweepy.errors.TweepyException as err:
         print("Tweepy Error:{0}".format(err))
         return []
 

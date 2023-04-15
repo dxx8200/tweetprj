@@ -22,11 +22,16 @@ DEL_PATH = os.path.join(MEDIA_PATH, 'delete')
 BL_FILE = os.path.join(MEDIA_PATH, "block.txt")
 NEW_PATH = os.path.join(MEDIA_PATH, 'new')
 
+LEVEL_L0 = 'L0'
+LEVEL_L1 = 'L1'
+LEVEL_L2 = 'L2'
+LEVEL_NEW = 'new'
+
 HTML_FOLDER = '_html'
 HTML_PATH = '.html'
 LOAD_TIME_INTERVAL = 60*60*24*2 # 2 Days
 LOAD_L1_INTERVAL = 60*60*24*5 # 5 Days
-MESSAGE_INTERVAL = 60*60*0.5 # 0.5 Hour
+MESSAGE_INTERVAL = 60*10 # 10 minutes
 MAX_NEW_USERS = 500
 
 # subclass JSONEncoder
@@ -99,14 +104,14 @@ def main(api, chat):
     
     has_updated = 0
     dict_user_path = {}
-    current_level = 'l0'
+    current_level = LEVEL_L0
     current_list = []
     #l1_loaded = False
     #
     # Main Loop
     while True:
         current_time = time.time()
-        if (current_time - last_load_time > LOAD_TIME_INTERVAL) or (len(current_list) <= 0 and current_level == 'new'):
+        if (current_time - last_load_time > LOAD_TIME_INTERVAL) or (len(current_list) <= 0 and current_level == LEVEL_NEW):
             last_load_time = time.time()
             l0_list = load_user_list(L0_PATH)
             l1_list = load_user_list(L1_PATH)
@@ -122,21 +127,21 @@ def main(api, chat):
             dict_user_path.update({d:L2_PATH for d in l2_list})
             dict_user_path.update({d:NEW_PATH for d in new_list})
             
-            current_level = 'L0'
+            current_level = LEVEL_L0
             current_list = l0_list
             
             chat.send(f"=== Lists L0[{len(l0_list)}] L1[{len(l1_list)}] L2[{len(l2_list)}] New[{len(new_list)}] block[{len(block_list)}] ===")
             
         elif len(current_list) <= 0:
-            if current_level == 'L0':
+            if current_level == LEVEL_L0:
                 current_list = l1_list
-                current_level = 'L1'
-            elif current_level == 'l1':
+                current_level = LEVEL_L1
+            elif current_level == LEVEL_L1:
                 current_list = l2_list
-                current_level = 'L2'
-            elif current_level == 'l2':
+                current_level = LEVEL_L2
+            elif current_level == LEVEL_L2:
                 current_list = new_list
-                current_level = 'new'
+                current_level = LEVEL_NEW
                 
         # Update the wait list
         current_user = ""
@@ -151,7 +156,7 @@ def main(api, chat):
                 has_updated = has_updated + 1
             
             # get related users for l0
-            if current_user in l0_list:
+            if current_level == LEVEL_L0:
                 related_users = set(get_related_users(api, new_tweets, current_user))
                 new_users = [u for u in related_users if u not in dict_user_path.keys() and u not in block_list]
                 if len(new_list) < MAX_NEW_USERS:
@@ -165,7 +170,7 @@ def main(api, chat):
             #chat.send(message)
             
             if current_time - last_message_time > MESSAGE_INTERVAL:
-                chat.send(f"=== Current_list[{len(current_list)}] Current_Level[{current_level}] Updated[{has_updated}] New[{len(new_list)}] Current[{current_user}] ===")
+                chat.send(f"=== Current_list[{len(current_list)}] Current_Level[{current_level}] Updated[{has_updated}] New_list[{len(new_list)}] Current[{current_user}] ===")
                 last_message_time = current_time
         except (tweepy.errors.Unauthorized, tweepy.errors.Forbidden, tweepy.errors.NotFound):
             try:
